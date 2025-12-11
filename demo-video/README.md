@@ -1,6 +1,3 @@
-# 🎬 Demo Video
-
-## 📹 Coming Soon!
 
 The demo video (2-3 minutes) will showcase:
 
