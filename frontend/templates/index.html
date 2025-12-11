@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Gateway</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Command Gateway</h1>
+            <div id="user-info" class="user-info" style="display: none;">
+                <span id="user-name"></span>
+                <span id="user-credits"></span>
+                <button id="logout-btn" class="btn btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- API Key Input -->
+        <div id="auth-section" class="auth-section">
+            <h2>Authentication</h2>
+            <div class="form-group">
+                <label for="api-key">API Key:</label>
+                <input type="password" id="api-key" placeholder="Enter your API key">
+                <button id="auth-btn" class="btn btn-primary">Authenticate</button>
+            </div>
+        </div>
+
+        <!-- Member Dashboard -->
+        <div id="member-dashboard" class="dashboard" style="display: none;">
+            <h2>Member Dashboard</h2>
+            
+            <div class="section">
+                <h3>Submit Command</h3>
+                <div class="form-group">
+                    <textarea id="command-input" placeholder="Enter your command here (e.g., ls -la, pwd, echo hello)..." rows="3"></textarea>
+                    <button id="submit-command" class="btn btn-primary">Submit Command</button>
+                </div>
+                <div class="command-help">
+                    <small>💡 <strong>Safe commands:</strong> ls, pwd, echo, cat, grep, find, ps, whoami, date</small><br>
+                    <small>⚠️ <strong>Blocked commands:</strong> rm -rf, sudo rm, dd, format, shutdown, reboot</small>
+                </div>
+                
+                <div class="command-templates">
+                    <h4>🚀 Quick Templates</h4>
+                    <div class="template-buttons">
+                        <button class="template-btn" data-command="ls -la">📁 List Files</button>
+                        <button class="template-btn" data-command="pwd">📍 Current Dir</button>
+                        <button class="template-btn" data-command="whoami">👤 Current User</button>
+                        <button class="template-btn" data-command="date">📅 Date & Time</button>
+                        <button class="template-btn" data-command="ps aux | head -10">⚡ Top Processes</button>
+                        <button class="template-btn" data-command="df -h">💾 Disk Usage</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Command History</h3>
+                <div class="history-controls">
+                    <input type="text" id="history-search" placeholder="🔍 Search command history..." />
+                    <button id="export-history" class="btn btn-secondary">📥 Export CSV</button>
+                </div>
+                <div id="command-history" class="history-list"></div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-dashboard" class="dashboard" style="display: none;">
+            <h2>Admin Dashboard</h2>
+            
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="users">Users</button>
+                <button class="tab-btn" data-tab="rules">Rules</button>
+                <button class="tab-btn" data-tab="audit">Audit Logs</button>
+                <button class="tab-btn" data-tab="realtime">🔴 Live Monitor</button>
+                <button class="tab-btn" data-tab="approvals">🔐 Approvals</button>
+            </div>
+
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content active">
+                <h3>Create User</h3>
+                <div class="form-group">
+                    <input type="text" id="new-user-name" placeholder="User name">
+                    <select id="new-user-role">
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <input type="number" id="new-user-credits" placeholder="Credits" value="100">
+                    <button id="create-user" class="btn btn-primary">Create User</button>
+                </div>
+                <div id="new-user-result" class="result"></div>
+            </div>
+
+            <!-- Rules Tab -->
+            <div id="rules-tab" class="tab-content">
+                <h3>Create Rule</h3>
+                <div class="form-group">
+                    <div class="pattern-input-container">
+                        <input type="text" id="new-rule-pattern" placeholder="Regex pattern (e.g., ^ls, rm.*-rf, sudo\\s+)">
+                        <div id="pattern-validation" class="validation-feedback"></div>
+                    </div>
+                    <select id="new-rule-action">
+                        <option value="AUTO_ACCEPT">Auto Accept</option>
+                        <option value="AUTO_REJECT">Auto Reject</option>
+                    </select>
+                    <button id="create-rule" class="btn btn-primary" disabled>Create Rule</button>
+                    <button id="check-conflicts" class="btn btn-secondary" disabled>🔍 Check Conflicts</button>
+                </div>
+                
+                <div id="conflict-analysis" class="conflict-analysis" style="display: none;"></div>
+                
+                <div class="regex-help">
+                    <h4>💡 Regex Quick Reference</h4>
+                    <div class="regex-examples">
+                        <div class="regex-example">
+                            <code>^ls</code> - Commands starting with "ls"
+                        </div>
+                        <div class="regex-example">
+                            <code>rm.*-rf</code> - "rm" followed by "-rf" anywhere
+                        </div>
+                        <div class="regex-example">
+                            <code>sudo\\s+</code> - "sudo" followed by spaces
+                        </div>
+                        <div class="regex-example">
+                            <code>\\.(sh|bash)$</code> - Files ending with .sh or .bash
+                        </div>
+                    </div>
+                </div>
+                
+                <h3>Current Rules</h3>
+                <div id="rules-list" class="rules-list"></div>
+            </div>
+
+            <!-- Audit Tab -->
+            <div id="audit-tab" class="tab-content">
+                <h3>Audit Logs</h3>
+                <div id="audit-logs" class="audit-list"></div>
+            </div>
+
+            <!-- Real-time Tab -->
+            <div id="realtime-tab" class="tab-content">
+                <h3>🔴 Real-time Monitoring</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4>Commands Today</h4>
+                        <div id="commands-today" class="stat-number">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Active Users</h4>
+                        <div id="active-users" class="stat-number">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Blocked Commands</h4>
+                        <div id="blocked-commands" class="stat-number">0</div>
+                    </div>
+                </div>
+                <div id="live-activity" class="live-activity"></div>
+            </div>
+
+            <!-- Approvals Tab -->
+            <div id="approvals-tab" class="tab-content">
+                <h3>🔐 Pending Approvals</h3>
+                <div class="approval-info">
+                    <p>🤖 Commands flagged by AI security analysis require approval from 2+ admins</p>
+                </div>
+                <div id="pending-approvals" class="approvals-list"></div>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <!-- Real-time Activity Feed (Admin only) -->
+    <div id="realtime-feed" class="realtime-feed" style="display: none;">
+        <h3>🔴 Live Activity Feed</h3>
+        <div id="activity-list" class="activity-list"></div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

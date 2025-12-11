@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Conflict Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .form-group { margin: 10px 0; }
+        input, select, button { padding: 8px; margin: 5px; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .conflict-item { background: #f8f9fa; padding: 10px; margin: 5px 0; border-left: 4px solid #ffc107; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test Conflict Detection</h1>
+    
+    <div class="form-group">
+        <label>API Key:</label>
+        <input type="text" id="api-key" value="XCSn11qN3x5bzJ3-NxFftQG1yW2IeTYoWnQwLvYuW-s" style="width: 400px;">
+    </div>
+    
+    <div class="form-group">
+        <label>Pattern:</label>
+        <input type="text" id="pattern" placeholder="Enter regex pattern" value="sudo.*">
+    </div>
+    
+    <div class="form-group">
+        <label>Action:</label>
+        <select id="action">
+            <option value="AUTO_ACCEPT">Auto Accept</option>
+            <option value="AUTO_REJECT" selected>Auto Reject</option>
+        </select>
+    </div>
+    
+    <button onclick="checkConflicts()">🔍 Check Conflicts</button>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <script>
+        async function checkConflicts() {
+            const apiKey = document.getElementById('api-key').value;
+            const pattern = document.getElementById('pattern').value;
+            const action = document.getElementById('action').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!pattern) {
+                alert('Please enter a pattern');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/rules/check-conflicts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({ pattern, action })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayResult(result);
+                    resultDiv.style.display = 'block';
+                } else {
+                    resultDiv.innerHTML = `<h3>❌ Error</h3><p>${result.error}</p>`;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>❌ Exception</h3><p>${error.message}</p>`;
+                resultDiv.style.display = 'block';
+            }
+        }
+        
+        function displayResult(result) {
+            const resultDiv = document.getElementById('result');
+            
+            if (!result.has_conflicts) {
+                resultDiv.innerHTML = `
+                    <h3>✅ No Conflicts Detected</h3>
+                    <p>This rule doesn't conflict with existing rules.</p>
+                `;
+                return;
+            }
+            
+            let html = `
+                <h3>⚠️ Conflicts Detected</h3>
+                <p><strong>Total conflicts:</strong> ${result.conflicts.length}</p>
+            `;
+            
+            if (result.warnings.length > 0) {
+                html += `<h4>Warnings:</h4><ul>`;
+                result.warnings.forEach(warning => {
+                    html += `<li>${warning}</li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            if (result.conflicts.length > 0) {
+                html += `<h4>Conflict Details:</h4>`;
+                result.conflicts.forEach((conflict, index) => {
+                    html += `
+                        <div class="conflict-item">
+                            <strong>${index + 1}. ${conflict.conflict_type} (${conflict.severity})</strong><br>
+                            ${conflict.description}<br>
+                            <em>Conflicts with Rule #${conflict.rule_id}: "${conflict.existing_pattern}" → ${conflict.existing_action}</em>
+                            ${conflict.examples.length > 0 ? `<br><strong>Examples:</strong> ${conflict.examples.join(', ')}` : ''}
+                        </div>
+                    `;
+                });
+            }
+            
+            if (result.suggestions.length > 0) {
+                html += `<h4>Suggestions:</h4><ul>`;
+                result.suggestions.forEach(suggestion => {
+                    html += `<li>${suggestion}</li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
